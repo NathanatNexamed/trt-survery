@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#292929">
+<title>TRT Assessment | Evolve Health &amp; Wellness</title>
+<!--
+==========================================================================
+  EVOLVE · TRT QUALIFICATION QUIZ (GoHighLevel)
+==========================================================================
+  1. Fill in the CONFIG block in the <script> below. Anything that still
+     says XXX is a placeholder.
+  2. GHL → Sites → Funnels → new page → add a "Custom JS/HTML" element
+     (full width) → paste this whole file.
+
+  HOW THE WEBHOOKS WORK
+  GHL does the listening. Each "Inbound Webhook" trigger gives you a URL;
+  this page sends data to that URL and the workflow runs.
+
+  WORKFLOW #1 "TRT Quiz – Send Code"
+    Trigger:  Inbound Webhook → paste its URL into CONFIG.webhooks.sendCode
+    The page sends:  phone (+1XXXXXXXXXX), first_name, code, clinic
+    Action:   Create/Update Contact (phone, first name from the webhook)
+    Action:   Send SMS:
+              "{{inboundWebhookRequest.code}} is your Evolve verification code."
+
+  WORKFLOW #2 "TRT Quiz – Lead Submitted"
+    Trigger:  Inbound Webhook → paste its URL into CONFIG.webhooks.submitLead
+    Action:   Create/Update Contact, map the answers into custom fields
+    Action:   Add Tag {{inboundWebhookRequest.tags}}
+    If/Else:  lead_tier is hot AND phone_verified is true
+              → alert team + speed-to-lead SMS
+              otherwise → nurture
+
+  SETUP ORDER (GHL needs one sample request before you can map fields)
+    a. Create both triggers, paste both URLs below. Keep testMode: true.
+    b. Take the quiz once with your own phone. testMode still sends to
+       both webhooks; it just also shows the code on screen.
+    c. In each trigger, select the sample request, then build the actions.
+    d. Set testMode: false and go live.
+
+  PAYLOAD sent to submitLead:
+    first_name, last_name, email, phone, best_time, goal, symptoms,
+    age_range, height, weight_lbs, trt_status, timeline, can_visit_office,
+    budget_fit, lead_tier (hot|nurture), phone_verified (true|false), tags,
+    utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid,
+    gclid, page_url, seconds_to_complete, submitted_at, test_mode
+
+  lead_tier is "nurture" when they answer No to the office visit, No to
+  budget, or "Just researching". Everything else is "hot".
+
+  Quiz answers are never sent to the Meta pixel. Only a bare
+  fbq('track','Lead') fires (see CONFIG.metaPixel).
+==========================================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #292929; }
+  .nq, .nq * { box-sizing: border-box; }
+  .nq {
+    /* Evolve brand */
+    --accent: #91C499;
+    --accent-ink: #1E1E1E;
+    --accent-dim: rgba(145,196,153,.12);
+    --accent-ring: rgba(145,196,153,.28);
+    --bg: #292929;
+    --card: #323232;
+    --field: #202020;
+    --line: #424242;
+    --line-strong: #5A5A5A;
+    --ink: #FFFFFF;
+    --muted: #A9AFAB;
+    --faint: #7C827E;
+    --danger: #FF8A7A;
+    --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+    --body: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+    font-family: var(--body);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background:
+      radial-gradient(120% 55% at 50% 0%, rgba(145,196,153,.10), rgba(145,196,153,0) 60%),
+      var(--bg);
+  }
+  .nq button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  .nq svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Header */
+  .nq-top { position: sticky; top: 0; z-index: 10; background: rgba(41,41,41,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid #383838; }
+  .nq-top-in { max-width: 560px; margin: 0 auto; padding: 12px 20px 14px; }
+  .nq-logo { display: flex; justify-content: center; align-items: center; height: 46px; margin-bottom: 10px; }
+  .nq-logo img { height: 46px; width: auto; max-width: 240px; }
+  .nq-logo img.is-dark { filter: url(#nq-logo-on-dark); }
+  .nq-word { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: .06em; text-transform: uppercase; }
+  .nq-nav { display: flex; align-items: center; gap: 12px; min-height: 40px; }
+  .nq-back { flex: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; }
+  .nq-back svg.i { width: 20px; height: 20px; }
+  .nq-back[hidden] { display: none; }
+  .nq-bar { flex: 1; display: flex; gap: 5px; }
+  .nq-seg { flex: 1; height: 5px; border-radius: 3px; background: #3E3E3E; overflow: hidden; }
+  .nq-seg i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
+
+  /* Body */
+  .nq-main { max-width: 560px; margin: 0 auto; padding: 28px 20px 0; }
+  .nq-step { opacity: 0; transform: translateY(10px); transition: opacity .28s ease, transform .28s ease; }
+  .nq-step.is-in { opacity: 1; transform: none; }
+  .nq-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+  .nq-eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--accent); }
+  .nq-h1 { font-family: var(--display); font-size: 52px; line-height: .95; font-weight: 800; letter-spacing: .005em; text-transform: uppercase; margin: 0; }
+  .nq-h1 span { color: var(--accent); display: block; }
+  .nq-lede { font-size: 18px; line-height: 1.5; color: var(--muted); margin: 16px 0 0; }
+  .nq-trust { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
+  .nq-trust-item { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 500; color: #D5D9D6; }
+  .nq-trust-item svg.i { width: 18px; height: 18px; color: var(--accent); stroke-width: 2.6; }
+  .nq-trust-item b { font-weight: 700; color: var(--ink); }
+  .nq-q { font-family: var(--display); font-size: 36px; line-height: 1.02; font-weight: 800; letter-spacing: .005em; text-transform: uppercase; margin: 0; }
+  .nq-q--sub { font-size: 26px; margin-top: 36px; }
+  .nq-label { margin: 10px 0 0; font-size: 17px; line-height: 1.45; color: var(--muted); }
+
+  /* Options */
+  .nq-opts { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+  .nq-opt { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 62px; padding: 12px 16px 12px 20px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); font-size: 18px; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; transition: border-color .15s, background-color .15s, transform .1s; }
+  .nq-opt:active { transform: scale(.985); }
+  .nq-opt.has-ic { padding-left: 10px; min-height: 68px; }
+  .nq-ic { flex: none; width: 46px; height: 46px; border-radius: 9px; background: var(--field); border: 1px solid #3A3A3A; color: var(--accent); display: grid; place-items: center; transition: background-color .15s, color .15s; }
+  .nq-opt-t { flex: 1; line-height: 1.25; }
+  .nq-radio { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line-strong); position: relative; transition: border-color .15s, background-color .15s; }
+  .nq-opt.is-multi .nq-radio { border-radius: 6px; }
+  .nq-opt.is-sel { border-color: var(--accent); background: var(--accent-dim); }
+  .nq-opt.is-sel .nq-ic { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .nq-opt.is-sel .nq-radio { border-color: var(--accent); background: var(--accent); }
+  .nq-opt.is-sel .nq-radio::after { content: ""; position: absolute; inset: 0; background: center / 15px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231E1E1E' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+  @media (hover: hover) { .nq-opt:hover { border-color: #6A6A6A; } .nq-opt.is-sel:hover { border-color: var(--accent); } }
+
+  /* Fields */
+  .nq-fields { display: grid; gap: 16px; margin-top: 24px; }
+  .nq-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .nq-f > span:not(.nq-err) { display: block; font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px 2px; }
+  .nq-in { width: 100%; height: 58px; border: 1.5px solid var(--line); border-radius: 10px; padding: 0 16px; font: inherit; font-size: 18px; font-weight: 500; background: var(--field); color: var(--ink); -webkit-appearance: none; appearance: none; transition: border-color .15s, box-shadow .15s; }
+  .nq-in::placeholder { color: #6E736F; }
+  .nq-in:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-ring); }
+  select.nq-in { background: var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9AFAB' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 14px center / 18px no-repeat; padding-right: 42px; }
+  select.nq-in:invalid, select.nq-in.is-empty { color: #6E736F; }
+  .nq-in.is-err { border-color: var(--danger); }
+  .nq-err { display: block; color: var(--danger); font-size: 14px; margin: 7px 0 0 2px; }
+  .nq-err:empty { display: none; }
+  .nq-chips { display: flex; gap: 8px; }
+  .nq-chip { flex: 1; height: 48px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card); font-size: 16px; font-weight: 600; color: var(--ink); cursor: pointer; transition: border-color .15s, background-color .15s, color .15s; }
+  .nq-chip.is-sel { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .nq-consent { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; line-height: 1.5; color: var(--faint); cursor: pointer; }
+  .nq-consent input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .nq-consent a { color: inherit; }
+  .nq-consent.is-err { color: var(--danger); }
+  .nq-hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; opacity: 0; }
+
+  /* CTA */
+  .nq-cta { position: sticky; bottom: 0; z-index: 5; margin-top: 18px; padding: 20px 0 calc(16px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 70%, rgba(41,41,41,0)); }
+  .nq-btn { position: relative; width: 100%; height: 60px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font-family: var(--display); font-size: 21px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: opacity .2s, transform .1s, filter .15s; }
+  .nq-btn:active:not(:disabled) { transform: scale(.985); }
+  @media (hover: hover) { .nq-btn:hover:not(:disabled) { filter: brightness(1.06); } }
+  .nq-btn:disabled { opacity: .28; cursor: not-allowed; }
+  .nq-btn.is-loading { color: transparent; pointer-events: none; }
+  .nq-btn.is-loading::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2.5px solid rgba(30,30,30,.3); border-top-color: var(--accent-ink); border-radius: 50%; animation: nq-spin .7s linear infinite; }
+  @keyframes nq-spin { to { transform: rotate(360deg); } }
+  .nq-form-err { color: var(--danger); font-size: 14px; text-align: center; margin: 0 0 10px; }
+  .nq-form-err:empty { display: none; }
+
+  /* OTP */
+  .nq-otp { position: relative; margin-top: 28px; }
+  .nq-otp-boxes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; pointer-events: none; }
+  .nq-otp-box { height: 68px; border: 1.5px solid var(--line); border-radius: 10px; display: grid; place-items: center; font-family: var(--display); font-size: 36px; font-weight: 700; background: var(--field); transition: border-color .15s, box-shadow .15s; }
+  .nq-otp-box.is-active { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-ring); }
+  .nq-otp.is-err .nq-otp-box { border-color: var(--danger); }
+  .nq-otp.is-shake { animation: nq-shake .4s; }
+  @keyframes nq-shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+  .nq-otp input { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; color: transparent; caret-color: transparent; font-size: 16px; letter-spacing: 40px; padding: 0 0 0 12px; outline: none; cursor: text; }
+  .nq-otp input::selection { background: transparent; }
+  .nq-otp-msg { min-height: 22px; margin-top: 12px; font-size: 15px; text-align: center; color: var(--danger); }
+  .nq-otp-links { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 10px; font-size: 15px; color: var(--muted); }
+  .nq-link { background: none; border: 0; padding: 4px; font-size: 15px; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .nq-link--quiet { color: var(--muted); font-weight: 500; }
+  .nq-test { margin-top: 18px; background: rgba(240,196,80,.08); border: 1px dashed #8B7232; color: #F1D58A; border-radius: 10px; padding: 11px 14px; font-size: 14px; line-height: 1.45; }
+  .nq-nowrap { white-space: nowrap; }
+
+  /* Done */
+  .nq-done { text-align: center; padding-top: 12px; }
+  .nq-check { width: 76px; height: 76px; border-radius: 50%; border: 2px solid var(--accent); background: var(--accent-dim); color: var(--accent); display: grid; place-items: center; margin: 0 auto 22px; }
+  .nq-check svg.i { width: 36px; height: 36px; stroke-width: 2.6; }
+  .nq-book { margin-top: 34px; text-align: left; }
+  .nq-book h3 { font-family: var(--display); font-size: 26px; font-weight: 800; text-transform: uppercase; margin: 0; }
+  .nq-book p { margin: 6px 0 16px; color: var(--muted); font-size: 16px; }
+  .nq-book iframe { width: 100%; height: 760px; border: 0; border-radius: 12px; background: #fff; }
+
+  .nq-foot { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 14px; color: var(--faint); padding: 28px 0 24px; line-height: 1.6; }
+  .nq-foot svg.i { width: 15px; height: 15px; }
+  .nq-foot a { color: inherit; }
+
+  @media (max-width: 380px) {
+    .nq-h1 { font-size: 46px; }
+    .nq-q { font-size: 32px; }
+    .nq-otp-box { height: 58px; font-size: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nq-step, .nq-seg i { transition: none; }
+  }
+</style>
+</head>
+<body>
+<!-- Recolors the Evolve logo for a dark background: gray #585858 lettering → white, green #91C499 "e" stays green. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="nq-logo-on-dark" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="2.157 -2.157 0 0 1  1.157 -1.157 0 0 1  2 -2 0 0 1  0 0 0 1 0"/>
+  </filter>
+</svg>
+<div id="nq" class="nq"></div>
+<script>
+(function () {
+  "use strict";
+
+  /* =====================================================================
+     CONFIG: edit this block
+     ===================================================================== */
+  var CONFIG = {
+    clinicName: "Evolve Health & Wellness",
+    logoUrl: "https://files.leadconnectorhq.com/file/691de2c4300f066e197cdfbb/8eb9a755a9a4153ca5e8579ce5298b55.png",
+    logoOnDark: true,                    // recolors the gray lettering to white for the dark theme
+    city: "St. Cloud",
+    priceFrom: "$XXX",                   // ← their real starting monthly price
+    priceIncludes: "labs, medication, and provider visits",
+    textFromNumber: "(XXX) XXX-XXXX",    // ← the number the team texts from
+    bookingUrl: "",                      // GHL calendar link; blank = no calendar on thank-you
+    privacyUrl: "",                      // ← their privacy policy URL (needed for A2P consent)
+    termsUrl: "",
+    privacyLine: "Your answers are private",
+
+    eyebrow: "Men's Health · St. Cloud, FL",
+    headline: "Get Your Edge",
+    headlineAccent: "Back.",
+    lede: "Energy. Drive. Strength. See if testosterone therapy is right for you in about 2 minutes.",
+    trust: {
+      rating: "",                        // e.g. "4.9" — REAL numbers only, blank hides it
+      ratingLabel: "on Google",
+      points: ["Licensed medical providers", "Local St. Cloud clinic"]
+    },
+
+    webhooks: {
+      sendCode: "https://services.leadconnectorhq.com/hooks/AhlAA4J2lOHtgKbk34Rb/webhook-trigger/6b99932d-0e80-4498-8e7a-c7710d4e9f60", // "TRT Quiz – Send Code"
+      submitLead: ""                     // GHL inbound webhook URL: "TRT Quiz – Lead Submitted"
+    },
+
+    // true = the code is ALSO shown on screen (for setup/testing). Webhooks still fire
+    // if URLs are filled in, so GHL can catch sample requests. Set false to go live.
+    testMode: true,
+    otp: { length: 6, resendSeconds: 30, maxSends: 3, maxAttempts: 5, expiresMinutes: 10, allowSkipAfterSends: 2 },
+
+    // "qualified" = fire fbq('track','Lead') only for verified hot leads · "all" · "off"
+    metaPixel: "qualified",
+    minSecondsToComplete: 8              // faster than this = bot, silently dropped
+  };
+
+  /* =====================================================================
+     ICONS
+     ===================================================================== */
+  function svg(paths) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + paths + "</svg>"; }
+  var IC = {
+    bolt: svg('<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/>'),
+    flame: svg('<path d="M12 22c3.9 0 7-2.8 7-7 0-3.4-2.1-5.9-3.9-7.9-.3 2-1.3 3.4-2.7 3.9.1-3.2-1.1-6.4-3.5-9 .1 3.7-3.9 6.5-3.9 11.4C5 18.6 8 22 12 22z"/>'),
+    dumbbell: svg('<path d="M6.5 6v12M17.5 6v12M3.5 9v6M20.5 9v6M6.5 12h11"/>'),
+    pulse: svg('<path d="M20.4 12.6A5.4 5.4 0 0 0 12 5.7a5.4 5.4 0 0 0-8.4 6.9"/><path d="M5.2 15.4 12 21l6.8-5.6"/><path d="M2 12.5h4l2-3 3 6 2.2-3H22"/>'),
+    moon: svg('<path d="M20 14.6A8.5 8.5 0 0 1 9.4 4 8.5 8.5 0 1 0 20 14.6z"/>'),
+    flask: svg('<path d="M9 3h6M10 3v6.2L4.6 18.8A1.5 1.5 0 0 0 5.9 21h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.2V3"/><path d="M7.2 15h9.6"/>'),
+    back: svg('<path d="M19 12H5M11 18l-6-6 6-6"/>'),
+    check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    lock: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'),
+    star: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="fill:currentColor;stroke:none"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z"/></svg>'
+  };
+
+  /* =====================================================================
+     QUESTIONS
+     ===================================================================== */
+  var STEPS = [
+    { id: "goal", group: 0, type: "single", hero: true, title: "What's your #1 goal?",
+      options: [
+        { k: "energy", l: "More energy & focus", i: "bolt" },
+        { k: "fat", l: "Drop body fat", i: "flame" },
+        { k: "muscle", l: "Build muscle & strength", i: "dumbbell" },
+        { k: "libido", l: "Sex drive & performance", i: "pulse" },
+        { k: "mood", l: "Better mood & sleep", i: "moon" },
+        { k: "levels", l: "Check my testosterone levels", i: "flask" }
+      ] },
+    { id: "symptoms", group: 0, type: "multi", title: "What have you noticed lately?", label: "Select all that apply.",
+      options: [
+        { k: "fatigue", l: "Low energy or fatigue" },
+        { k: "libido", l: "Low sex drive" },
+        { k: "fog", l: "Brain fog or poor focus" },
+        { k: "weight", l: "Weight gain, especially the gut" },
+        { k: "muscle", l: "Harder to build muscle" },
+        { k: "sleep", l: "Poor sleep" },
+        { k: "mood", l: "Irritability or low motivation" },
+        { k: "none", l: "None of these", none: true }
+      ] },
+    { id: "age", group: 1, type: "single", title: "How old are you?", label: "Age range",
+      options: [
+        { k: "u30", l: "Under 30" }, { k: "30s", l: "30–39" }, { k: "40s", l: "40–49" },
+        { k: "50s", l: "50–59" }, { k: "60p", l: "60+" }
+      ] },
+    { id: "body", group: 1, type: "body", title: "Height and weight", label: "Your provider uses this to plan your care." },
+    { id: "trt", group: 2, type: "single", title: "Where are you with TRT?", label: "Treatment history",
+      options: [
+        { k: "new", l: "Never had my levels tested" },
+        { k: "tested", l: "Tested, but not on treatment" },
+        { k: "switcher", l: "On TRT with another clinic" },
+        { k: "former", l: "Used to be on TRT" }
+      ] },
+    { id: "timeline", group: 2, type: "single", title: "When do you want to start?", label: "Timeline",
+      options: [
+        { k: "now", l: "Ready now" }, { k: "30d", l: "Within 30 days" }, { k: "research", l: "Just researching" }
+      ] },
+    { id: "location", group: 3, type: "single", title: "Can you come to our " + CONFIG.city + " office for labs?", label: "Location",
+      options: [
+        { k: "yes", l: "Yes" }, { k: "no", l: "No, I'm not near " + CONFIG.city }
+      ] },
+    { id: "price", group: 3, type: "single", title: "Does this fit your budget?",
+      label: "Programs start at " + CONFIG.priceFrom + "/month, including " + CONFIG.priceIncludes + ".",
+      options: [
+        { k: "yes", l: "Yes, that works" }, { k: "talk", l: "I'd like to talk through options" }, { k: "no", l: "No, that's out of my budget" }
+      ] },
+    { id: "contact", group: 4, type: "contact", title: "Last step. Where do we reach you?", label: "We'll text you a code to confirm your number." },
+    { id: "otp", group: 4, type: "otp", title: "Enter your code" }
+  ];
+  var GROUPS = 5;
+
+  /* =====================================================================
+     STATE + HELPERS
+     ===================================================================== */
+  var state = {
+    i: 0, done: false, lock: false, startedAt: Date.now(),
+    answers: {},
+    body: { ft: "", inch: "", wt: "" },
+    contact: { first: "", last: "", email: "", phone: "", best: "" },
+    consent: false, honeypot: "",
+    otp: { code: null, sentAt: 0, sends: 0, attempts: 0, verified: false },
+    tier: "hot", verified: false
+  };
+  var timers = [];
+  var UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid", "gclid"];
+  var utm = {};
+  try { var qs = new URLSearchParams(location.search); UTM_KEYS.forEach(function (k) { utm[k] = qs.get(k) || ""; }); } catch (e) {}
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
+  function digits(s) { return String(s || "").replace(/\D/g, ""); }
+  function phone10(s) { var d = digits(s); if (d.length === 11 && d[0] === "1") d = d.slice(1); return d.slice(0, 10); }
+  function fmtPhone(d) {
+    if (!d) return "";
+    if (d.length < 4) return "(" + d;
+    if (d.length < 7) return "(" + d.slice(0, 3) + ") " + d.slice(3);
+    return "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6);
+  }
+  function validPhone(d) {
+    return /^[2-9]\d{2}[2-9]\d{6}$/.test(d) && !/^[2-9]11/.test(d) && d.slice(3, 6) !== "555" && !/^(\d)\1{9}$/.test(d);
+  }
+  function validEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(s).trim()); }
+  function showCode() { return CONFIG.testMode || !CONFIG.webhooks.sendCode; }
+  function newCode(len) {
+    var out = "", a = new Uint32Array(len);
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    for (var i = 0; i < len; i++) out += String(a[i] % 10);
+    return out;
+  }
+  function later(fn, ms) { var t = setTimeout(fn, ms); timers.push(t); return t; }
+  function every(fn, ms) { var t = setInterval(fn, ms); timers.push(t); return t; }
+  function clearTimers() { timers.forEach(function (t) { clearTimeout(t); clearInterval(t); }); timers = []; }
+  function flatten(obj) {
+    var out = {};
+    Object.keys(obj).forEach(function (k) { out[k] = obj[k] == null ? "" : String(obj[k]); });
+    return out;
+  }
+
+  // POST to a GHL inbound webhook. JSON first; if the browser blocks it on CORS,
+  // retry as a form-encoded "simple" request (response is unreadable but it arrives).
+  function post(url, data) {
+    if (!url) return Promise.resolve({ ok: true, skipped: true });
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var kill = setTimeout(function () { if (ctrl) ctrl.abort(); }, 8000);
+    return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data), keepalive: true, signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { clearTimeout(kill); return { ok: r.ok }; })
+      .catch(function (err) {
+        clearTimeout(kill);
+        if (err && err.name === "AbortError") return { ok: false };
+        return fetch(url, { method: "POST", mode: "no-cors", body: new URLSearchParams(flatten(data)), keepalive: true })
+          .then(function () { return { ok: true, opaque: true }; })
+          .catch(function () { return { ok: false }; });
+      });
+  }
+
+  /* =====================================================================
+     SHELL
+     ===================================================================== */
+  var root = document.getElementById("nq");
+  function logoHTML() {
+    if (CONFIG.logoUrl) return '<img src="' + esc(CONFIG.logoUrl) + '" alt="' + esc(CONFIG.clinicName) + '"' + (CONFIG.logoOnDark ? ' class="is-dark"' : "") + ">";
+    return '<span class="nq-word">' + esc(CONFIG.clinicName) + "</span>";
+  }
+  var segs = "";
+  for (var g = 0; g < GROUPS; g++) segs += '<div class="nq-seg"><i></i></div>';
+  root.innerHTML =
+    '<header class="nq-top"><div class="nq-top-in">' +
+      '<div class="nq-logo">' + logoHTML() + "</div>" +
+      '<div class="nq-nav"><button type="button" class="nq-back" aria-label="Back" hidden>' + IC.back + "</button>" +
+      '<div class="nq-bar" role="progressbar" aria-label="Progress">' + segs + "</div></div>" +
+    "</div></header>" +
+    '<main class="nq-main"></main>';
+  var main = root.querySelector(".nq-main");
+  var backBtn = root.querySelector(".nq-back");
+  var segFills = root.querySelectorAll(".nq-seg i");
+
+  function updateChrome() {
+    var step = STEPS[state.i];
+    backBtn.hidden = state.done || state.i === 0;
+    var inGroup = STEPS.filter(function (s) { return s.group === step.group; });
+    var pos = inGroup.indexOf(step);
+    for (var g = 0; g < GROUPS; g++) {
+      var f = state.done ? 1 : g < step.group ? 1 : g > step.group ? 0 : (pos + 1) / (inGroup.length + 1);
+      segFills[g].style.width = (f * 100) + "%";
+    }
+  }
+
+  function footerHTML() {
+    var links = [];
+    if (CONFIG.privacyUrl) links.push('<a href="' + esc(CONFIG.privacyUrl) + '" target="_blank" rel="noopener">Privacy</a>');
+    if (CONFIG.termsUrl) links.push('<a href="' + esc(CONFIG.termsUrl) + '" target="_blank" rel="noopener">Terms</a>');
+    return '<div class="nq-foot">' + IC.lock + "<span>" + esc(CONFIG.privacyLine) + "</span>" + (links.length ? "<span>· " + links.join(" · ") + "</span>" : "") + "</div>";
+  }
+
+  /* =====================================================================
+     VIEWS
+     ===================================================================== */
+  function heroHTML() {
+    var t = CONFIG.trust, items = [];
+    if (t.rating) items.push('<span class="nq-trust-item">' + IC.star + "<b>" + esc(t.rating) + "</b>" + esc(t.ratingLabel) + "</span>");
+    (t.points || []).forEach(function (p) { items.push('<span class="nq-trust-item">' + IC.check + esc(p) + "</span>"); });
+    return (CONFIG.eyebrow ? '<p class="nq-eyebrow">' + esc(CONFIG.eyebrow) + "</p>" : "") +
+      '<h1 class="nq-h1">' + esc(CONFIG.headline) + " <span>" + esc(CONFIG.headlineAccent) + "</span></h1>" +
+      '<p class="nq-lede">' + esc(CONFIG.lede) + "</p>" +
+      (items.length ? '<div class="nq-trust">' + items.join("") + "</div>" : "");
+  }
+
+  function titleHTML(step) {
+    return '<h2 class="nq-q' + (step.hero ? " nq-q--sub" : "") + '">' + esc(step.title) + "</h2>" +
+      (step.label ? '<p class="nq-label">' + esc(step.label) + "</p>" : "");
+  }
+
+  function optionsHTML(step, multi) {
+    var cur = state.answers[step.id];
+    return '<div class="nq-opts" role="' + (multi ? "group" : "radiogroup") + '">' + step.options.map(function (o, idx) {
+      var sel = multi ? (cur || []).some(function (c) { return c.k === o.k; }) : cur && cur.k === o.k;
+      return '<button type="button" data-opt="' + idx + '" role="' + (multi ? "checkbox" : "radio") + '" aria-checked="' + !!sel + '" class="nq-opt' +
+        (o.i ? " has-ic" : "") + (multi ? " is-multi" : "") + (sel ? " is-sel" : "") + '">' +
+        (o.i ? '<span class="nq-ic">' + IC[o.i] + "</span>" : "") +
+        '<span class="nq-opt-t">' + esc(o.l) + '</span><span class="nq-radio" aria-hidden="true"></span></button>';
+    }).join("") + "</div>";
+  }
+
+  function ctaHTML(label, disabled, extra) {
+    return '<div class="nq-cta">' + (extra || "") + '<button type="button" class="nq-btn" data-next' + (disabled ? " disabled" : "") + ">" + esc(label) + "</button></div>";
+  }
+
+  var VIEWS = {
+    single: function (step) {
+      return (step.hero ? heroHTML() : "") + titleHTML(step) + optionsHTML(step, false) + footerHTML();
+    },
+    multi: function (step) {
+      var has = (state.answers[step.id] || []).length > 0;
+      return titleHTML(step) + optionsHTML(step, true) + footerHTML() + ctaHTML("Continue", !has);
+    },
+    body: function (step) {
+      var ft = "", inch = "";
+      [4, 5, 6, 7].forEach(function (n) { ft += '<option value="' + n + '"' + (String(state.body.ft) === String(n) ? " selected" : "") + ">" + n + " ft</option>"; });
+      for (var n = 0; n < 12; n++) inch += '<option value="' + n + '"' + (String(state.body.inch) === String(n) ? " selected" : "") + ">" + n + " in</option>";
+      return titleHTML(step) +
+        '<div class="nq-fields">' +
+          '<div class="nq-f"><span>Height</span><div class="nq-row">' +
+            '<select class="nq-in" id="nq-ft" required aria-label="Height in feet"><option value=""' + (state.body.ft === "" ? " selected" : "") + ' disabled>Feet</option>' + ft + "</select>" +
+            '<select class="nq-in" id="nq-inch" required aria-label="Height in inches"><option value=""' + (state.body.inch === "" ? " selected" : "") + ' disabled>Inches</option>' + inch + "</select>" +
+          "</div></div>" +
+          '<label class="nq-f"><span>Weight (lbs)</span><input class="nq-in" id="nq-wt" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="e.g. 205" value="' + esc(state.body.wt) + '" autocomplete="off"></label>' +
+        "</div>" + footerHTML() + ctaHTML("Continue", !bodyValid());
+    },
+    contact: function (step) {
+      var c = state.contact;
+      var times = ["Morning", "Afternoon", "Evening"].map(function (t) {
+        return '<button type="button" class="nq-chip' + (c.best === t ? " is-sel" : "") + '" data-chip="' + t + '" aria-pressed="' + (c.best === t) + '">' + t + "</button>";
+      }).join("");
+      var legal = [];
+      if (CONFIG.privacyUrl) legal.push('<a href="' + esc(CONFIG.privacyUrl) + '" target="_blank" rel="noopener">Privacy Policy</a>');
+      if (CONFIG.termsUrl) legal.push('<a href="' + esc(CONFIG.termsUrl) + '" target="_blank" rel="noopener">Terms</a>');
+      return titleHTML(step) +
+        '<div class="nq-fields">' +
+          '<div class="nq-row">' +
+            '<label class="nq-f"><span>First name</span><input class="nq-in" id="nq-first" type="text" autocomplete="given-name" autocapitalize="words" value="' + esc(c.first) + '"><span class="nq-err" data-err="first"></span></label>' +
+            '<label class="nq-f"><span>Last name</span><input class="nq-in" id="nq-last" type="text" autocomplete="family-name" autocapitalize="words" value="' + esc(c.last) + '"><span class="nq-err" data-err="last"></span></label>' +
+          "</div>" +
+          '<label class="nq-f"><span>Email</span><input class="nq-in" id="nq-email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" value="' + esc(c.email) + '"><span class="nq-err" data-err="email"></span></label>' +
+          '<label class="nq-f"><span>Mobile phone</span><input class="nq-in" id="nq-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(407) 123-4567" value="' + esc(fmtPhone(c.phone)) + '"><span class="nq-err" data-err="phone"></span></label>' +
+          '<div class="nq-f"><span>Best time to reach you</span><div class="nq-chips">' + times + "</div></div>" +
+          '<input class="nq-hp" id="nq-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+          '<label class="nq-consent" id="nq-consent-wrap"><input type="checkbox" id="nq-consent"' + (state.consent ? " checked" : "") + "><span>" +
+            "By tapping “Text me a code,” I agree to receive calls and texts from " + esc(CONFIG.clinicName) +
+            " about my inquiry, including automated texts, at the number provided. Consent is not a condition of purchase. Msg &amp; data rates may apply. Msg frequency varies. Reply STOP to opt out." +
+            (legal.length ? " " + legal.join(" &amp; ") + "." : "") +
+          "</span></label>" +
+        "</div>" + footerHTML() + ctaHTML("Text me a code", false, '<p class="nq-form-err" id="nq-form-err"></p>');
+    },
+    otp: function (step) {
+      var boxes = "";
+      for (var b = 0; b < CONFIG.otp.length; b++) boxes += '<div class="nq-otp-box"></div>';
+      return '<h2 class="nq-q">' + esc(step.title) + "</h2>" +
+        '<p class="nq-label">We texted a ' + CONFIG.otp.length + '-digit code to <span class="nq-nowrap">' + esc(fmtPhone(state.contact.phone)) + "</span>.</p>" +
+        (showCode() ? '<div class="nq-test"><b>Test mode:</b> your code is <b>' + state.otp.code + "</b>. Turn testMode off before going live.</div>" : "") +
+        '<div class="nq-otp" id="nq-otp"><div class="nq-otp-boxes">' + boxes + "</div>" +
+          '<input id="nq-code" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="' + CONFIG.otp.length + '" aria-label="Verification code"></div>' +
+        '<div class="nq-otp-msg" id="nq-otp-msg" role="alert"></div>' +
+        '<div class="nq-otp-links">' +
+          '<span id="nq-resend"></span>' +
+          '<button type="button" class="nq-link nq-link--quiet" data-act="edit">Wrong number? Edit it</button>' +
+          '<button type="button" class="nq-link nq-link--quiet" data-act="skip" id="nq-skip" hidden>Didn\'t get a text? Continue without it</button>' +
+        "</div>" + footerHTML();
+    },
+    done: function () {
+      var first = esc(state.contact.first.trim());
+      var hot = state.tier === "hot";
+      var book = "";
+      if (hot && CONFIG.bookingUrl) {
+        var src = CONFIG.bookingUrl;
+        try {
+          var u = new URL(CONFIG.bookingUrl);
+          u.searchParams.set("first_name", state.contact.first.trim());
+          u.searchParams.set("last_name", state.contact.last.trim());
+          u.searchParams.set("email", state.contact.email.trim());
+          u.searchParams.set("phone", "+1" + state.contact.phone);
+          src = u.toString();
+        } catch (e) {}
+        book = '<div class="nq-book"><h3>Want to skip the wait?</h3><p>Lock in a time for your consultation now.</p>' +
+          '<iframe src="' + esc(src) + '" title="Book a consultation" loading="lazy"></iframe></div>';
+      }
+      return '<div class="nq-done"><div class="nq-check">' + IC.check + "</div>" +
+        '<h2 class="nq-q">' + (hot ? "You're in, " + first + "." : "Thanks, " + first + ".") + "</h2>" +
+        '<p class="nq-label">' + (hot
+          ? "Someone from our team will text you from <span class=\"nq-nowrap\">" + esc(CONFIG.textFromNumber) + "</span> in the next few minutes."
+          : "We'll text you from <span class=\"nq-nowrap\">" + esc(CONFIG.textFromNumber) + "</span> with more information.") + "</p></div>" +
+        book + footerHTML();
+    }
+  };
+
+  /* =====================================================================
+     RENDER + NAV
+     ===================================================================== */
+  function render() {
+    clearTimers();
+    var step = STEPS[state.i];
+    main.innerHTML = '<div class="nq-step">' + (state.done ? VIEWS.done() : VIEWS[step.type](step)) + "</div>";
+    var el = main.firstElementChild;
+    requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add("is-in"); }); });
+    updateChrome();
+    if (!state.done && AFTER[step.type]) AFTER[step.type](step);
+    var top = root.getBoundingClientRect().top + window.pageYOffset;
+    if (window.pageYOffset > top) window.scrollTo({ top: top, behavior: "smooth" });
+  }
+  function go(delta) {
+    var n = state.i + delta;
+    if (n < 0 || n >= STEPS.length) return;
+    state.i = n;
+    render();
+  }
+
+  function bodyValid() {
+    var b = state.body, w = parseInt(b.wt, 10);
+    return b.ft !== "" && b.inch !== "" && w >= 80 && w <= 600;
+  }
+  var AFTER = {
+    body: function () {
+      var btn = main.querySelector("[data-next]");
+      function sync() {
+        state.body.ft = main.querySelector("#nq-ft").value;
+        state.body.inch = main.querySelector("#nq-inch").value;
+        var wt = main.querySelector("#nq-wt");
+        wt.value = digits(wt.value).slice(0, 3);
+        state.body.wt = wt.value;
+        btn.disabled = !bodyValid();
+      }
+      main.querySelectorAll("select, input").forEach(function (f) { f.addEventListener("input", sync); f.addEventListener("change", sync); });
+    },
+    contact: function () {
+      var map = { first: "#nq-first", last: "#nq-last", email: "#nq-email" };
+      Object.keys(map).forEach(function (k) {
+        main.querySelector(map[k]).addEventListener("input", function (e) { state.contact[k] = e.target.value; clearErr(k); });
+      });
+      var ph = main.querySelector("#nq-phone");
+      ph.addEventListener("input", function () {
+        var d = phone10(ph.value);
+        state.contact.phone = d;
+        ph.value = fmtPhone(d);
+        clearErr("phone");
+      });
+      main.querySelector("#nq-consent").addEventListener("change", function (e) {
+        state.consent = e.target.checked;
+        main.querySelector("#nq-consent-wrap").classList.remove("is-err");
+        setFormErr("");
+      });
+      main.querySelector("#nq-hp").addEventListener("input", function (e) { state.honeypot = e.target.value; });
+      main.querySelectorAll(".nq-in").forEach(function (f) {
+        f.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); submitContact(); } });
+      });
+    },
+    otp: function () {
+      var input = main.querySelector("#nq-code");
+      var boxes = main.querySelectorAll(".nq-otp-box");
+      function paint() {
+        var v = input.value;
+        boxes.forEach(function (b, idx) {
+          b.textContent = v[idx] || "";
+          b.classList.toggle("is-active", document.activeElement === input && idx === Math.min(v.length, boxes.length - 1));
+        });
+      }
+      input.addEventListener("input", function () {
+        input.value = digits(input.value).slice(0, CONFIG.otp.length);
+        main.querySelector("#nq-otp").classList.remove("is-err");
+        setOtpMsg("");
+        paint();
+        if (input.value.length === CONFIG.otp.length) verify(input.value);
+      });
+      input.addEventListener("focus", paint);
+      input.addEventListener("blur", paint);
+      try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+      paint();
+      tickResend();
+      every(tickResend, 1000);
+    }
+  };
+
+  /* ---------- contact + OTP ---------- */
+  function clearErr(k) {
+    var e = main.querySelector('[data-err="' + k + '"]');
+    if (e) e.textContent = "";
+    var f = main.querySelector("#nq-" + k);
+    if (f) f.classList.remove("is-err");
+  }
+  function setErr(k, msg) {
+    var e = main.querySelector('[data-err="' + k + '"]');
+    if (e) e.textContent = msg;
+    var f = main.querySelector("#nq-" + k);
+    if (f) f.classList.add("is-err");
+  }
+  function setFormErr(msg) { var e = main.querySelector("#nq-form-err"); if (e) e.textContent = msg; }
+  function setOtpMsg(msg) { var e = main.querySelector("#nq-otp-msg"); if (e) e.textContent = msg; }
+
+  function submitContact() {
+    var c = state.contact, ok = true, firstBad = null;
+    function bad(k, msg) { setErr(k, msg); ok = false; if (!firstBad) firstBad = k; }
+    if (!c.first.trim()) bad("first", "Required");
+    if (!c.last.trim()) bad("last", "Required");
+    if (!validEmail(c.email)) bad("email", "Enter a valid email");
+    if (!validPhone(c.phone)) bad("phone", "Enter a valid 10-digit US mobile number");
+    if (!state.consent) {
+      main.querySelector("#nq-consent-wrap").classList.add("is-err");
+      if (ok) setFormErr("Check the box to get your code.");
+      ok = false;
+    }
+    if (!ok) { if (firstBad) main.querySelector("#nq-" + firstBad).focus(); return; }
+
+    // Bot traps: honeypot filled or impossibly fast → fake success, send nothing.
+    if (state.honeypot || (Date.now() - state.startedAt) / 1000 < CONFIG.minSecondsToComplete) {
+      state.tier = computeTier(); state.done = true; render(); return;
+    }
+
+    var btn = main.querySelector("[data-next]");
+    btn.classList.add("is-loading");
+    sendCode().then(function (ok) {
+      btn.classList.remove("is-loading");
+      if (!ok) { setFormErr("We couldn't send a text right now. Check your number and try again."); return; }
+      go(1);
+    });
+  }
+
+  function sendCode() {
+    var o = state.otp;
+    o.code = newCode(CONFIG.otp.length);
+    o.sentAt = Date.now();
+    o.sends += 1;
+    o.attempts = 0;
+    return post(CONFIG.webhooks.sendCode, {
+      phone: "+1" + state.contact.phone,
+      first_name: state.contact.first.trim(),
+      code: o.code,
+      clinic: CONFIG.clinicName
+    }).then(function (r) { return r.ok; });
+  }
+
+  function tickResend() {
+    var el = main.querySelector("#nq-resend");
+    if (!el) return;
+    var o = state.otp, c = CONFIG.otp;
+    var skip = main.querySelector("#nq-skip");
+    if (skip) skip.hidden = !(c.allowSkipAfterSends && o.sends >= c.allowSkipAfterSends);
+    if (o.sends >= c.maxSends) { el.innerHTML = ""; return; }
+    var left = Math.ceil((o.sentAt + c.resendSeconds * 1000 - Date.now()) / 1000);
+    var html = left > 0
+      ? "Resend code in 0:" + (left < 10 ? "0" : "") + left
+      : '<button type="button" class="nq-link" data-act="resend">Resend code</button>';
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
+
+  function otpFail(msg) {
+    var box = main.querySelector("#nq-otp"), input = main.querySelector("#nq-code");
+    box.classList.add("is-err", "is-shake");
+    later(function () { box.classList.remove("is-shake"); }, 450);
+    setOtpMsg(msg);
+    input.value = "";
+    main.querySelectorAll(".nq-otp-box").forEach(function (b) { b.textContent = ""; });
+  }
+
+  function verify(val) {
+    var o = state.otp, c = CONFIG.otp;
+    if (Date.now() - o.sentAt > c.expiresMinutes * 60000) return otpFail("That code expired. Tap resend to get a new one.");
+    if (o.attempts >= c.maxAttempts) return otpFail("Too many tries. Tap resend to get a new code.");
+    if (val === o.code) { o.verified = true; return finish(true); }
+    o.attempts += 1;
+    var left = c.maxAttempts - o.attempts;
+    otpFail(left > 0 ? "That code didn't match. " + left + (left === 1 ? " try" : " tries") + " left." : "Too many tries. Tap resend to get a new code.");
+  }
+
+  /* ---------- submit ---------- */
+  function computeTier() {
+    var a = state.answers;
+    var cold = (a.location && a.location.k === "no") || (a.price && a.price.k === "no") || (a.timeline && a.timeline.k === "research");
+    return cold ? "nurture" : "hot";
+  }
+  function label(id) { var a = state.answers[id]; return a ? a.l : ""; }
+
+  function buildPayload(verified) {
+    var a = state.answers, c = state.contact, tier = computeTier();
+    var tags = ["trt-quiz", "trt-" + tier, verified ? "phone-verified" : "phone-unverified"];
+    if (a.trt && a.trt.k === "switcher") tags.push("trt-switcher");
+    if (a.trt && a.trt.k === "former") tags.push("trt-former-patient");
+    if (a.price && a.price.k === "talk") tags.push("trt-budget-question");
+    if (a.location && a.location.k === "no") tags.push("trt-out-of-area");
+    if (CONFIG.testMode) tags.push("trt-quiz-test");
+    var p = {
+      first_name: c.first.trim(), last_name: c.last.trim(), email: c.email.trim(), phone: "+1" + c.phone,
+      best_time: c.best,
+      goal: label("goal"),
+      symptoms: (a.symptoms || []).map(function (s) { return s.l; }).join(", "),
+      age_range: label("age"),
+      height: state.body.ft + "'" + state.body.inch + '"',
+      weight_lbs: state.body.wt,
+      trt_status: label("trt"),
+      timeline: label("timeline"),
+      can_visit_office: label("location"),
+      budget_fit: label("price"),
+      lead_tier: tier,
+      phone_verified: verified,
+      tags: tags.join(","),
+      page_url: location.href.split("#")[0],
+      seconds_to_complete: Math.round((Date.now() - state.startedAt) / 1000),
+      submitted_at: new Date().toISOString(),
+      test_mode: !!CONFIG.testMode
+    };
+    UTM_KEYS.forEach(function (k) { p[k] = utm[k] || ""; });
+    return p;
+  }
+
+  function firePixel(verified, tier) {
+    if (CONFIG.metaPixel === "off" || typeof window.fbq !== "function") return;
+    if (CONFIG.metaPixel === "qualified" && !(verified && tier === "hot")) return;
+    try { window.fbq("track", "Lead"); } catch (e) {}
+  }
+
+  function finish(verified) {
+    if (state.lock) return;
+    state.lock = true;
+    state.verified = verified;
+    state.tier = computeTier();
+    setOtpMsg("");
+    var input = main.querySelector("#nq-code");
+    if (input) input.disabled = true;
+    var payload = buildPayload(verified);
+    window.nqLastPayload = payload; // handy for checking in the browser console
+    post(CONFIG.webhooks.submitLead, payload).then(function () {
+      firePixel(verified, state.tier);
+      state.lock = false;
+      state.done = true;
+      render();
+    });
+  }
+
+  /* =====================================================================
+     EVENTS
+     ===================================================================== */
+  root.addEventListener("click", function (e) {
+    if (state.lock) return;
+    var t = e.target;
+
+    if (t.closest(".nq-back")) { if (!state.done) go(-1); return; }
+
+    var optBtn = t.closest("[data-opt]");
+    if (optBtn) {
+      var step = STEPS[state.i];
+      var o = step.options[+optBtn.getAttribute("data-opt")];
+      if (step.type === "single") {
+        state.answers[step.id] = o;
+        main.querySelectorAll("[data-opt]").forEach(function (b) {
+          var on = b === optBtn;
+          b.classList.toggle("is-sel", on);
+          b.setAttribute("aria-checked", on);
+        });
+        state.lock = true;
+        later(function () { state.lock = false; go(1); }, 260);
+      } else {
+        var cur = (state.answers[step.id] || []).slice();
+        var at = cur.findIndex(function (c) { return c.k === o.k; });
+        if (at > -1) cur.splice(at, 1);
+        else if (o.none) cur = [o];
+        else { cur = cur.filter(function (c) { return !c.none; }); cur.push(o); }
+        state.answers[step.id] = cur;
+        main.querySelectorAll("[data-opt]").forEach(function (b) {
+          var opt = step.options[+b.getAttribute("data-opt")];
+          var on = cur.some(function (c) { return c.k === opt.k; });
+          b.classList.toggle("is-sel", on);
+          b.setAttribute("aria-checked", on);
+        });
+        main.querySelector("[data-next]").disabled = cur.length === 0;
+      }
+      return;
+    }
+
+    var chip = t.closest("[data-chip]");
+    if (chip) {
+      var v = chip.getAttribute("data-chip");
+      state.contact.best = state.contact.best === v ? "" : v;
+      main.querySelectorAll("[data-chip]").forEach(function (b) {
+        var on = b.getAttribute("data-chip") === state.contact.best;
+        b.classList.toggle("is-sel", on);
+        b.setAttribute("aria-pressed", on);
+      });
+      return;
+    }
+
+    var next = t.closest("[data-next]");
+    if (next && !next.disabled) {
+      if (STEPS[state.i].type === "contact") submitContact();
+      else go(1);
+      return;
+    }
+
+    var act = t.closest("[data-act]");
+    if (act) {
+      var which = act.getAttribute("data-act");
+      if (which === "edit") { go(-1); return; }
+      if (which === "skip") { finish(false); return; }
+      if (which === "resend") {
+        act.disabled = true;
+        sendCode().then(function (ok) {
+          if (!ok) { setOtpMsg("We couldn't send a text. Check your number and try again."); act.disabled = false; return; }
+          render(); // re-render so test mode shows the new code
+        });
+      }
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
