@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -255,7 +255,7 @@
  
     // true = the code is ALSO shown on screen (for setup/testing). Webhooks still fire
     // if URLs are filled in, so GHL can catch sample requests. Set false to go live.
-    testMode: true,
+    testMode: false,
     otp: { length: 6, resendSeconds: 30, maxSends: 3, maxAttempts: 5, expiresMinutes: 10, allowSkipAfterSends: 2 },
  
     // "qualified" = fire fbq('track','Lead') only for verified hot leads · "all" · "off"
