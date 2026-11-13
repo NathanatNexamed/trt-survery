@@ -13,18 +13,18 @@
      says XXX is a placeholder.
   2. GHL → Sites → Funnels → new page → add a "Custom JS/HTML" element
      (full width) → paste this whole file.
- 
+
   HOW THE WEBHOOKS WORK
   GHL does the listening. Each "Inbound Webhook" trigger gives you a URL;
   this page sends data to that URL and the workflow runs.
- 
+
   WORKFLOW #1 "TRT Quiz – Send Code"
     Trigger:  Inbound Webhook → paste its URL into CONFIG.webhooks.sendCode
     The page sends:  phone (+1XXXXXXXXXX), first_name, last_name, code, clinic
     Action:   Create/Update Contact (phone, first name, last name from the webhook)
     Action:   Send SMS:
               "{{inboundWebhookRequest.code}} is your Evolve verification code."
- 
+
   WORKFLOW #2 "TRT Quiz – Lead Submitted"
     Trigger:  Inbound Webhook → paste its URL into CONFIG.webhooks.submitLead
     Action:   Create/Update Contact, map the answers into custom fields
@@ -32,24 +32,24 @@
     If/Else:  lead_tier is hot AND phone_verified is true
               → alert team + speed-to-lead SMS
               otherwise → nurture
- 
+
   SETUP ORDER (GHL needs one sample request before you can map fields)
     a. Create both triggers, paste both URLs below. Keep testMode: true.
     b. Take the quiz once with your own phone. testMode still sends to
        both webhooks; it just also shows the code on screen.
     c. In each trigger, select the sample request, then build the actions.
     d. Set testMode: false and go live.
- 
+
   PAYLOAD sent to submitLead:
     first_name, last_name, email, phone, best_time, goal, symptoms,
     age_range, height, weight_lbs, trt_status, timeline, can_visit_office,
     budget_fit, lead_tier (hot|nurture), phone_verified (true|false), tags,
     utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid,
     gclid, page_url, seconds_to_complete, submitted_at, test_mode
- 
+
   lead_tier is "nurture" when they answer No to the office visit, No to
   budget, or "Just researching". Everything else is "hot".
- 
+
   Quiz answers are never sent to the Meta pixel. Only a bare
   fbq('track','Lead') fires (see CONFIG.metaPixel).
 ==========================================================================
@@ -89,91 +89,106 @@
   }
   .nq button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
   .nq svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
- 
-  /* Header */
-  .nq-top { position: sticky; top: 0; z-index: 10; background: rgba(41,41,41,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid #383838; }
-  .nq-top-in { max-width: 560px; margin: 0 auto; padding: 12px 20px 14px; }
-  .nq-logo { display: flex; justify-content: center; align-items: center; height: 46px; margin-bottom: 10px; }
-  .nq-logo img { height: 46px; width: auto; max-width: 240px; }
+
+  /* Header: one compact row + progress bar (~70px) */
+  .nq-top { position: sticky; top: 0; z-index: 10; background: rgba(41,41,41,.94); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid #383838; }
+  .nq-top-in { max-width: 560px; margin: 0 auto; padding: 8px 16px 10px; }
+  .nq-head { display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 8px; height: 40px; }
+  .nq-logo { display: flex; justify-content: center; align-items: center; min-width: 0; }
+  .nq-logo img { height: 36px; width: auto; max-width: 200px; }
   .nq-logo img.is-dark { filter: url(#nq-logo-on-dark); }
-  .nq-word { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: .06em; text-transform: uppercase; }
-  .nq-nav { display: flex; align-items: center; gap: 12px; min-height: 40px; }
-  .nq-back { flex: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; }
-  .nq-back svg.i { width: 20px; height: 20px; }
-  .nq-back[hidden] { display: none; }
-  .nq-bar { flex: 1; display: flex; gap: 5px; }
-  .nq-seg { flex: 1; height: 5px; border-radius: 3px; background: #3E3E3E; overflow: hidden; }
+  .nq-word { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+  .nq-back { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; }
+  .nq-back svg.i { width: 18px; height: 18px; }
+  .nq-back[hidden] { display: grid; visibility: hidden; }
+  .nq-bar { display: flex; gap: 4px; margin-top: 8px; }
+  .nq-seg { flex: 1; height: 4px; border-radius: 2px; background: #3E3E3E; overflow: hidden; }
   .nq-seg i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
- 
+
   /* Body */
-  .nq-main { max-width: 560px; margin: 0 auto; padding: 28px 20px 0; }
+  .nq-main { max-width: 560px; margin: 0 auto; padding: 20px 18px 0; }
   .nq-step { opacity: 0; transform: translateY(10px); transition: opacity .28s ease, transform .28s ease; }
   .nq-step.is-in { opacity: 1; transform: none; }
-  .nq-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
-  .nq-eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--accent); }
-  .nq-h1 { font-family: var(--display); font-size: 52px; line-height: .95; font-weight: 800; letter-spacing: .005em; text-transform: uppercase; margin: 0; }
-  .nq-h1 span { color: var(--accent); display: block; }
-  .nq-lede { font-size: 18px; line-height: 1.5; color: var(--muted); margin: 16px 0 0; }
-  .nq-trust { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
-  .nq-trust-item { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 500; color: #D5D9D6; }
-  .nq-trust-item svg.i { width: 18px; height: 18px; color: var(--accent); stroke-width: 2.6; }
+  .nq-eyebrow { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+  .nq-eyebrow::before { content: ""; width: 18px; height: 2px; background: var(--accent); }
+  .nq-h1 { font-family: var(--display); font-size: clamp(34px, 10.6vw, 50px); line-height: 1; font-weight: 800; letter-spacing: 0; text-transform: uppercase; margin: 0; }
+  .nq-h1 span { color: var(--accent); }
+  .nq-lede { font-size: 16px; line-height: 1.4; color: var(--muted); margin: 8px 0 0; }
+  .nq-trust { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .nq-trust-item { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: #D5D9D6; }
+  .nq-trust-item svg.i { width: 16px; height: 16px; color: var(--accent); stroke-width: 2.6; }
   .nq-trust-item b { font-weight: 700; color: var(--ink); }
-  .nq-q { font-family: var(--display); font-size: 36px; line-height: 1.02; font-weight: 800; letter-spacing: .005em; text-transform: uppercase; margin: 0; }
-  .nq-q--sub { font-size: 26px; margin-top: 36px; }
-  .nq-label { margin: 10px 0 0; font-size: 17px; line-height: 1.45; color: var(--muted); }
- 
-  /* Options */
-  .nq-opts { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
-  .nq-opt { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 62px; padding: 12px 16px 12px 20px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); font-size: 18px; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; transition: border-color .15s, background-color .15s, transform .1s; }
+  .nq-q { font-family: var(--display); font-size: 32px; line-height: 1.02; font-weight: 800; letter-spacing: 0; text-transform: uppercase; margin: 0; }
+  .nq-q--sub { font-size: 22px; margin-top: 18px; }
+  .nq-label { margin: 6px 0 0; font-size: 16px; line-height: 1.4; color: var(--muted); }
+
+  /* Options: stacked list */
+  .nq-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+  .nq-opt { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px 10px 18px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); font-size: 17px; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; transition: border-color .15s, background-color .15s, transform .1s; }
   .nq-opt:active { transform: scale(.985); }
-  .nq-opt.has-ic { padding-left: 10px; min-height: 68px; }
-  .nq-ic { flex: none; width: 46px; height: 46px; border-radius: 9px; background: var(--field); border: 1px solid #3A3A3A; color: var(--accent); display: grid; place-items: center; transition: background-color .15s, color .15s; }
-  .nq-opt-t { flex: 1; line-height: 1.25; }
-  .nq-radio { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line-strong); position: relative; transition: border-color .15s, background-color .15s; }
+  .nq-ic { flex: none; width: 34px; height: 34px; border-radius: 8px; background: var(--field); border: 1px solid #3A3A3A; color: var(--accent); display: grid; place-items: center; transition: background-color .15s, color .15s; }
+  .nq-ic svg.i { width: 20px; height: 20px; }
+  .nq-opt-t { flex: 1; line-height: 1.22; }
+  .nq-radio { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); position: relative; transition: border-color .15s, background-color .15s; }
   .nq-opt.is-multi .nq-radio { border-radius: 6px; }
   .nq-opt.is-sel { border-color: var(--accent); background: var(--accent-dim); }
   .nq-opt.is-sel .nq-ic { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .nq-opt.is-sel .nq-radio { border-color: var(--accent); background: var(--accent); }
-  .nq-opt.is-sel .nq-radio::after { content: ""; position: absolute; inset: 0; background: center / 15px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231E1E1E' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+  .nq-opt.is-sel .nq-radio::after { content: ""; position: absolute; inset: 0; background: center / 13px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231E1E1E' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
   @media (hover: hover) { .nq-opt:hover { border-color: #6A6A6A; } .nq-opt.is-sel:hover { border-color: var(--accent); } }
- 
+
+  /* Tiles (goal question): 2 x 3 */
+  .nq-opts--tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .nq-opts--tiles .nq-opt { flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 84px; padding: 11px 12px; font-size: 15.5px; }
+  .nq-opts--tiles .nq-opt-t { flex: none; padding-right: 4px; }
+  .nq-opts--tiles .nq-radio { position: absolute; top: 11px; right: 11px; width: 20px; height: 20px; }
+
+  /* Grid (symptoms): 2 x 4 */
+  .nq-opts--grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .nq-opts--grid .nq-opt { min-height: 56px; padding: 8px 10px 8px 13px; gap: 8px; font-size: 15.5px; }
+  .nq-opts--grid .nq-radio { width: 20px; height: 20px; }
+  .nq-opts--tiles .nq-opt.is-sel .nq-radio::after, .nq-opts--grid .nq-opt.is-sel .nq-radio::after { background-size: 12px; }
+
   /* Fields */
-  .nq-fields { display: grid; gap: 16px; margin-top: 24px; }
-  .nq-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .nq-f > span:not(.nq-err) { display: block; font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px 2px; }
-  .nq-in { width: 100%; height: 58px; border: 1.5px solid var(--line); border-radius: 10px; padding: 0 16px; font: inherit; font-size: 18px; font-weight: 500; background: var(--field); color: var(--ink); -webkit-appearance: none; appearance: none; transition: border-color .15s, box-shadow .15s; }
-  .nq-in::placeholder { color: #6E736F; }
+  .nq-fields { display: grid; gap: 10px; margin-top: 18px; }
+  .nq-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .nq-row3 { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 10px; }
+  .nq-f { display: block; min-width: 0; }
+  .nq-f > span:not(.nq-err) { display: block; font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px 2px; }
+  .nq-in { width: 100%; height: 54px; border: 1.5px solid var(--line); border-radius: 10px; padding: 0 14px; font: inherit; font-size: 17px; font-weight: 500; background: var(--field); color: var(--ink); -webkit-appearance: none; appearance: none; transition: border-color .15s, box-shadow .15s; }
+  .nq-in::placeholder { color: #7A7F7B; }
   .nq-in:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-ring); }
-  select.nq-in { background: var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9AFAB' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 14px center / 18px no-repeat; padding-right: 42px; }
-  select.nq-in:invalid, select.nq-in.is-empty { color: #6E736F; }
+  select.nq-in { background: var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A9AFAB' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 10px center / 16px no-repeat; padding-right: 32px; }
+  select.nq-in:invalid { color: #7A7F7B; }
   .nq-in.is-err { border-color: var(--danger); }
-  .nq-err { display: block; color: var(--danger); font-size: 14px; margin: 7px 0 0 2px; }
+  .nq-err { display: block; color: var(--danger); font-size: 13px; margin: 5px 0 0 2px; }
   .nq-err:empty { display: none; }
   .nq-chips { display: flex; gap: 8px; }
-  .nq-chip { flex: 1; height: 48px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card); font-size: 16px; font-weight: 600; color: var(--ink); cursor: pointer; transition: border-color .15s, background-color .15s, color .15s; }
+  .nq-chip { flex: 1; height: 42px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card); font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; transition: border-color .15s, background-color .15s, color .15s; }
   .nq-chip.is-sel { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
-  .nq-consent { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; line-height: 1.5; color: var(--faint); cursor: pointer; }
-  .nq-consent input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .nq-consent { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; line-height: 1.45; color: var(--faint); cursor: pointer; }
+  .nq-consent input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--accent); cursor: pointer; }
   .nq-consent a { color: inherit; }
   .nq-consent.is-err { color: var(--danger); }
   .nq-hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; opacity: 0; }
- 
+
   /* CTA */
-  .nq-cta { position: sticky; bottom: 0; z-index: 5; margin-top: 18px; padding: 20px 0 calc(16px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 70%, rgba(41,41,41,0)); }
-  .nq-btn { position: relative; width: 100%; height: 60px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font-family: var(--display); font-size: 21px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: opacity .2s, transform .1s, filter .15s; }
+  .nq-cta { position: sticky; bottom: 0; z-index: 5; margin-top: 10px; padding: 14px 0 calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 72%, rgba(41,41,41,0)); }
+  .nq-cta--inline { position: static; margin-top: 16px; padding: 0; background: none; }
+  .nq-btn { position: relative; width: 100%; height: 56px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: opacity .2s, transform .1s, filter .15s; }
   .nq-btn:active:not(:disabled) { transform: scale(.985); }
   @media (hover: hover) { .nq-btn:hover:not(:disabled) { filter: brightness(1.06); } }
   .nq-btn:disabled { opacity: .28; cursor: not-allowed; }
   .nq-btn.is-loading { color: transparent; pointer-events: none; }
   .nq-btn.is-loading::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2.5px solid rgba(30,30,30,.3); border-top-color: var(--accent-ink); border-radius: 50%; animation: nq-spin .7s linear infinite; }
   @keyframes nq-spin { to { transform: rotate(360deg); } }
-  .nq-form-err { color: var(--danger); font-size: 14px; text-align: center; margin: 0 0 10px; }
+  .nq-form-err { color: var(--danger); font-size: 14px; text-align: center; margin: 0 0 8px; }
   .nq-form-err:empty { display: none; }
- 
+
   /* OTP */
-  .nq-otp { position: relative; margin-top: 28px; }
+  .nq-otp { position: relative; margin-top: 22px; }
   .nq-otp-boxes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; pointer-events: none; }
-  .nq-otp-box { height: 68px; border: 1.5px solid var(--line); border-radius: 10px; display: grid; place-items: center; font-family: var(--display); font-size: 36px; font-weight: 700; background: var(--field); transition: border-color .15s, box-shadow .15s; }
+  .nq-otp-box { height: 64px; border: 1.5px solid var(--line); border-radius: 10px; display: grid; place-items: center; font-family: var(--display); font-size: 34px; font-weight: 700; background: var(--field); transition: border-color .15s, box-shadow .15s; }
   .nq-otp-box.is-active { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-ring); }
   .nq-otp.is-err .nq-otp-box { border-color: var(--danger); }
   .nq-otp.is-shake { animation: nq-shake .4s; }
@@ -181,29 +196,42 @@
   .nq-otp input { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; color: transparent; caret-color: transparent; font-size: 16px; letter-spacing: 40px; padding: 0 0 0 12px; outline: none; cursor: text; }
   .nq-otp input::selection { background: transparent; }
   .nq-otp-msg { min-height: 22px; margin-top: 12px; font-size: 15px; text-align: center; color: var(--danger); }
-  .nq-otp-links { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 10px; font-size: 15px; color: var(--muted); }
+  .nq-otp-links { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 8px; font-size: 15px; color: var(--muted); }
   .nq-link { background: none; border: 0; padding: 4px; font-size: 15px; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   .nq-link--quiet { color: var(--muted); font-weight: 500; }
-  .nq-test { margin-top: 18px; background: rgba(240,196,80,.08); border: 1px dashed #8B7232; color: #F1D58A; border-radius: 10px; padding: 11px 14px; font-size: 14px; line-height: 1.45; }
+  .nq-test { margin-top: 14px; background: rgba(240,196,80,.08); border: 1px dashed #8B7232; color: #F1D58A; border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.45; }
   .nq-nowrap { white-space: nowrap; }
- 
+
   /* Done */
   .nq-done { text-align: center; padding-top: 12px; }
-  .nq-check { width: 76px; height: 76px; border-radius: 50%; border: 2px solid var(--accent); background: var(--accent-dim); color: var(--accent); display: grid; place-items: center; margin: 0 auto 22px; }
-  .nq-check svg.i { width: 36px; height: 36px; stroke-width: 2.6; }
-  .nq-book { margin-top: 34px; text-align: left; }
+  .nq-check { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--accent); background: var(--accent-dim); color: var(--accent); display: grid; place-items: center; margin: 0 auto 20px; }
+  .nq-check svg.i { width: 34px; height: 34px; stroke-width: 2.6; }
+  .nq-book { margin-top: 30px; text-align: left; }
   .nq-book h3 { font-family: var(--display); font-size: 26px; font-weight: 800; text-transform: uppercase; margin: 0; }
   .nq-book p { margin: 6px 0 16px; color: var(--muted); font-size: 16px; }
   .nq-book iframe { width: 100%; height: 760px; border: 0; border-radius: 12px; background: #fff; }
- 
-  .nq-foot { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 14px; color: var(--faint); padding: 28px 0 24px; line-height: 1.6; }
-  .nq-foot svg.i { width: 15px; height: 15px; }
+
+  .nq-foot { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--faint); padding: 16px 0 16px; line-height: 1.5; }
+  .nq-foot svg.i { width: 14px; height: 14px; }
   .nq-foot a { color: inherit; }
- 
+
+  /* Small phones (iPhone SE / mini) */
   @media (max-width: 380px) {
-    .nq-h1 { font-size: 46px; }
-    .nq-q { font-size: 32px; }
-    .nq-otp-box { height: 58px; font-size: 30px; }
+    .nq-q { font-size: 29px; }
+    .nq-otp-box { height: 56px; font-size: 30px; }
+  }
+  @media (max-height: 600px) {
+    .nq-main { padding-top: 14px; }
+    .nq-q--sub { margin-top: 14px; }
+    .nq-opts { margin-top: 14px; }
+    .nq-opts--tiles .nq-opt { min-height: 74px; padding: 9px 11px; gap: 6px; }
+    .nq-h1 { font-size: 36px; }
+    .nq-eyebrow { display: none; }
+    .nq-lede { margin-top: 6px; }
+    .nq-trust { margin-top: 8px; }
+    .nq-opts--grid .nq-opt, .nq-opt { min-height: 52px; }
+    .nq-fields { margin-top: 14px; }
+    .nq-in { height: 50px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .nq-step, .nq-seg i { transition: none; }
@@ -221,7 +249,7 @@
 <script>
 (function () {
   "use strict";
- 
+
   /* =====================================================================
      CONFIG: edit this block
      ===================================================================== */
@@ -237,32 +265,32 @@
     privacyUrl: "",                      // ← their privacy policy URL (needed for A2P consent)
     termsUrl: "",
     privacyLine: "Your answers are private",
- 
+
     eyebrow: "Men's Health · St. Cloud, FL",
     headline: "Get Your Edge",
     headlineAccent: "Back.",
-    lede: "Energy. Drive. Strength. See if testosterone therapy is right for you in about 2 minutes.",
+    lede: "See if TRT is right for you in 2 minutes.",
     trust: {
       rating: "",                        // e.g. "4.9" — REAL numbers only, blank hides it
       ratingLabel: "on Google",
-      points: ["Licensed medical providers", "Local St. Cloud clinic"]
+      points: ["Licensed providers", "Local St. Cloud clinic"]
     },
- 
+
     webhooks: {
       sendCode: "https://services.leadconnectorhq.com/hooks/AhlAA4J2lOHtgKbk34Rb/webhook-trigger/6b99932d-0e80-4498-8e7a-c7710d4e9f60", // "TRT Quiz – Send Code"
       submitLead: "https://services.leadconnectorhq.com/hooks/AhlAA4J2lOHtgKbk34Rb/webhook-trigger/1e997d18-0963-48cb-8423-cc378fbd8d31" // "TRT Quiz – Lead Submitted"
     },
- 
+
     // true = the code is ALSO shown on screen (for setup/testing). Webhooks still fire
     // if URLs are filled in, so GHL can catch sample requests. Set false to go live.
     testMode: false,
     otp: { length: 6, resendSeconds: 30, maxSends: 3, maxAttempts: 5, expiresMinutes: 10, allowSkipAfterSends: 2 },
- 
+
     // "qualified" = fire fbq('track','Lead') only for verified hot leads · "all" · "off"
     metaPixel: "qualified",
     minSecondsToComplete: 8              // faster than this = bot, silently dropped
   };
- 
+
   /* =====================================================================
      ICONS
      ===================================================================== */
@@ -279,12 +307,12 @@
     lock: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'),
     star: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="fill:currentColor;stroke:none"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z"/></svg>'
   };
- 
+
   /* =====================================================================
      QUESTIONS
      ===================================================================== */
   var STEPS = [
-    { id: "goal", group: 0, type: "single", hero: true, title: "What's your #1 goal?",
+    { id: "goal", group: 0, type: "single", hero: true, layout: "tiles", title: "What's your #1 goal?",
       options: [
         { k: "energy", l: "More energy & focus", i: "bolt" },
         { k: "fat", l: "Drop body fat", i: "flame" },
@@ -293,15 +321,15 @@
         { k: "mood", l: "Better mood & sleep", i: "moon" },
         { k: "levels", l: "Check my testosterone levels", i: "flask" }
       ] },
-    { id: "symptoms", group: 0, type: "multi", title: "What have you noticed lately?", label: "Select all that apply.",
+    { id: "symptoms", group: 0, type: "multi", layout: "grid", title: "What have you noticed lately?", label: "Select all that apply.",
       options: [
-        { k: "fatigue", l: "Low energy or fatigue" },
+        { k: "fatigue", l: "Low energy" },
         { k: "libido", l: "Low sex drive" },
-        { k: "fog", l: "Brain fog or poor focus" },
-        { k: "weight", l: "Weight gain, especially the gut" },
-        { k: "muscle", l: "Harder to build muscle" },
+        { k: "fog", l: "Brain fog" },
+        { k: "weight", l: "Belly fat / weight gain" },
+        { k: "muscle", l: "Hard to build muscle" },
         { k: "sleep", l: "Poor sleep" },
-        { k: "mood", l: "Irritability or low motivation" },
+        { k: "mood", l: "Low motivation" },
         { k: "none", l: "None of these", none: true }
       ] },
     { id: "age", group: 1, type: "single", title: "How old are you?", label: "Age range",
@@ -330,11 +358,11 @@
       options: [
         { k: "yes", l: "Yes, that works" }, { k: "talk", l: "I'd like to talk through options" }, { k: "no", l: "No, that's out of my budget" }
       ] },
-    { id: "contact", group: 4, type: "contact", title: "Last step. Where do we reach you?", label: "We'll text you a code to confirm your number." },
+    { id: "contact", group: 4, type: "contact", title: "Where do we text you?", label: "Last step. We'll text a code to confirm it's you." },
     { id: "otp", group: 4, type: "otp", title: "Enter your code" }
   ];
   var GROUPS = 5;
- 
+
   /* =====================================================================
      STATE + HELPERS
      ===================================================================== */
@@ -351,7 +379,7 @@
   var UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid", "gclid"];
   var utm = {};
   try { var qs = new URLSearchParams(location.search); UTM_KEYS.forEach(function (k) { utm[k] = qs.get(k) || ""; }); } catch (e) {}
- 
+
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
   function digits(s) { return String(s || "").replace(/\D/g, ""); }
   function phone10(s) { var d = digits(s); if (d.length === 11 && d[0] === "1") d = d.slice(1); return d.slice(0, 10); }
@@ -380,7 +408,7 @@
     Object.keys(obj).forEach(function (k) { out[k] = obj[k] == null ? "" : String(obj[k]); });
     return out;
   }
- 
+
   // POST to a GHL inbound webhook. JSON first; if the browser blocks it on CORS,
   // retry as a form-encoded "simple" request (response is unreadable but it arrives).
   function post(url, data) {
@@ -397,7 +425,7 @@
           .catch(function () { return { ok: false }; });
       });
   }
- 
+
   /* =====================================================================
      SHELL
      ===================================================================== */
@@ -410,15 +438,15 @@
   for (var g = 0; g < GROUPS; g++) segs += '<div class="nq-seg"><i></i></div>';
   root.innerHTML =
     '<header class="nq-top"><div class="nq-top-in">' +
-      '<div class="nq-logo">' + logoHTML() + "</div>" +
-      '<div class="nq-nav"><button type="button" class="nq-back" aria-label="Back" hidden>' + IC.back + "</button>" +
-      '<div class="nq-bar" role="progressbar" aria-label="Progress">' + segs + "</div></div>" +
+      '<div class="nq-head"><button type="button" class="nq-back" aria-label="Back" hidden>' + IC.back + "</button>" +
+      '<div class="nq-logo">' + logoHTML() + '</div><span aria-hidden="true"></span></div>' +
+      '<div class="nq-bar" role="progressbar" aria-label="Progress">' + segs + "</div>" +
     "</div></header>" +
     '<main class="nq-main"></main>';
   var main = root.querySelector(".nq-main");
   var backBtn = root.querySelector(".nq-back");
   var segFills = root.querySelectorAll(".nq-seg i");
- 
+
   function updateChrome() {
     var step = STEPS[state.i];
     backBtn.hidden = state.done || state.i === 0;
@@ -429,14 +457,14 @@
       segFills[g].style.width = (f * 100) + "%";
     }
   }
- 
+
   function footerHTML() {
     var links = [];
     if (CONFIG.privacyUrl) links.push('<a href="' + esc(CONFIG.privacyUrl) + '" target="_blank" rel="noopener">Privacy</a>');
     if (CONFIG.termsUrl) links.push('<a href="' + esc(CONFIG.termsUrl) + '" target="_blank" rel="noopener">Terms</a>');
     return '<div class="nq-foot">' + IC.lock + "<span>" + esc(CONFIG.privacyLine) + "</span>" + (links.length ? "<span>· " + links.join(" · ") + "</span>" : "") + "</div>";
   }
- 
+
   /* =====================================================================
      VIEWS
      ===================================================================== */
@@ -449,15 +477,15 @@
       '<p class="nq-lede">' + esc(CONFIG.lede) + "</p>" +
       (items.length ? '<div class="nq-trust">' + items.join("") + "</div>" : "");
   }
- 
+
   function titleHTML(step) {
     return '<h2 class="nq-q' + (step.hero ? " nq-q--sub" : "") + '">' + esc(step.title) + "</h2>" +
       (step.label ? '<p class="nq-label">' + esc(step.label) + "</p>" : "");
   }
- 
+
   function optionsHTML(step, multi) {
     var cur = state.answers[step.id];
-    return '<div class="nq-opts" role="' + (multi ? "group" : "radiogroup") + '">' + step.options.map(function (o, idx) {
+    return '<div class="nq-opts' + (step.layout ? " nq-opts--" + step.layout : "") + '" role="' + (multi ? "group" : "radiogroup") + '">' + step.options.map(function (o, idx) {
       var sel = multi ? (cur || []).some(function (c) { return c.k === o.k; }) : cur && cur.k === o.k;
       return '<button type="button" data-opt="' + idx + '" role="' + (multi ? "checkbox" : "radio") + '" aria-checked="' + !!sel + '" class="nq-opt' +
         (o.i ? " has-ic" : "") + (multi ? " is-multi" : "") + (sel ? " is-sel" : "") + '">' +
@@ -465,11 +493,11 @@
         '<span class="nq-opt-t">' + esc(o.l) + '</span><span class="nq-radio" aria-hidden="true"></span></button>';
     }).join("") + "</div>";
   }
- 
-  function ctaHTML(label, disabled, extra) {
-    return '<div class="nq-cta">' + (extra || "") + '<button type="button" class="nq-btn" data-next' + (disabled ? " disabled" : "") + ">" + esc(label) + "</button></div>";
+
+  function ctaHTML(label, disabled, extra, inline) {
+    return '<div class="nq-cta' + (inline ? " nq-cta--inline" : "") + '">' + (extra || "") + '<button type="button" class="nq-btn" data-next' + (disabled ? " disabled" : "") + ">" + esc(label) + "</button></div>";
   }
- 
+
   var VIEWS = {
     single: function (step) {
       return (step.hero ? heroHTML() : "") + titleHTML(step) + optionsHTML(step, false) + footerHTML();
@@ -483,13 +511,11 @@
       [4, 5, 6, 7].forEach(function (n) { ft += '<option value="' + n + '"' + (String(state.body.ft) === String(n) ? " selected" : "") + ">" + n + " ft</option>"; });
       for (var n = 0; n < 12; n++) inch += '<option value="' + n + '"' + (String(state.body.inch) === String(n) ? " selected" : "") + ">" + n + " in</option>";
       return titleHTML(step) +
-        '<div class="nq-fields">' +
-          '<div class="nq-f"><span>Height</span><div class="nq-row">' +
-            '<select class="nq-in" id="nq-ft" required aria-label="Height in feet"><option value=""' + (state.body.ft === "" ? " selected" : "") + ' disabled>Feet</option>' + ft + "</select>" +
-            '<select class="nq-in" id="nq-inch" required aria-label="Height in inches"><option value=""' + (state.body.inch === "" ? " selected" : "") + ' disabled>Inches</option>' + inch + "</select>" +
-          "</div></div>" +
-          '<label class="nq-f"><span>Weight (lbs)</span><input class="nq-in" id="nq-wt" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="e.g. 205" value="' + esc(state.body.wt) + '" autocomplete="off"></label>' +
-        "</div>" + footerHTML() + ctaHTML("Continue", !bodyValid());
+        '<div class="nq-fields"><div class="nq-row3">' +
+          '<label class="nq-f"><span>Height</span><select class="nq-in" id="nq-ft" required aria-label="Height in feet"><option value=""' + (state.body.ft === "" ? " selected" : "") + ' disabled>Feet</option>' + ft + "</select></label>" +
+          '<label class="nq-f"><span>&nbsp;</span><select class="nq-in" id="nq-inch" required aria-label="Height in inches"><option value=""' + (state.body.inch === "" ? " selected" : "") + ' disabled>Inches</option>' + inch + "</select></label>" +
+          '<label class="nq-f"><span>Weight</span><input class="nq-in" id="nq-wt" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="lbs" aria-label="Weight in pounds" value="' + esc(state.body.wt) + '" autocomplete="off"></label>' +
+        "</div></div>" + ctaHTML("Continue", !bodyValid(), "", true) + footerHTML();
     },
     contact: function (step) {
       var c = state.contact;
@@ -502,11 +528,11 @@
       return titleHTML(step) +
         '<div class="nq-fields">' +
           '<div class="nq-row">' +
-            '<label class="nq-f"><span>First name</span><input class="nq-in" id="nq-first" type="text" autocomplete="given-name" autocapitalize="words" value="' + esc(c.first) + '"><span class="nq-err" data-err="first"></span></label>' +
-            '<label class="nq-f"><span>Last name</span><input class="nq-in" id="nq-last" type="text" autocomplete="family-name" autocapitalize="words" value="' + esc(c.last) + '"><span class="nq-err" data-err="last"></span></label>' +
+            '<div class="nq-f"><input class="nq-in" id="nq-first" type="text" placeholder="First name" aria-label="First name" autocomplete="given-name" autocapitalize="words" value="' + esc(c.first) + '"><span class="nq-err" data-err="first"></span></div>' +
+            '<div class="nq-f"><input class="nq-in" id="nq-last" type="text" placeholder="Last name" aria-label="Last name" autocomplete="family-name" autocapitalize="words" value="' + esc(c.last) + '"><span class="nq-err" data-err="last"></span></div>' +
           "</div>" +
-          '<label class="nq-f"><span>Email</span><input class="nq-in" id="nq-email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" value="' + esc(c.email) + '"><span class="nq-err" data-err="email"></span></label>' +
-          '<label class="nq-f"><span>Mobile phone</span><input class="nq-in" id="nq-phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(407) 123-4567" value="' + esc(fmtPhone(c.phone)) + '"><span class="nq-err" data-err="phone"></span></label>' +
+          '<div class="nq-f"><input class="nq-in" id="nq-email" type="email" inputmode="email" placeholder="Email" aria-label="Email" autocomplete="email" autocapitalize="off" spellcheck="false" value="' + esc(c.email) + '"><span class="nq-err" data-err="email"></span></div>' +
+          '<div class="nq-f"><input class="nq-in" id="nq-phone" type="tel" inputmode="tel" placeholder="Mobile phone" aria-label="Mobile phone" autocomplete="tel-national" value="' + esc(fmtPhone(c.phone)) + '"><span class="nq-err" data-err="phone"></span></div>' +
           '<div class="nq-f"><span>Best time to reach you</span><div class="nq-chips">' + times + "</div></div>" +
           '<input class="nq-hp" id="nq-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
           '<label class="nq-consent" id="nq-consent-wrap"><input type="checkbox" id="nq-consent"' + (state.consent ? " checked" : "") + "><span>" +
@@ -556,7 +582,7 @@
         book + footerHTML();
     }
   };
- 
+
   /* =====================================================================
      RENDER + NAV
      ===================================================================== */
@@ -577,7 +603,7 @@
     state.i = n;
     render();
   }
- 
+
   function bodyValid() {
     var b = state.body, w = parseInt(b.wt, 10);
     return b.ft !== "" && b.inch !== "" && w >= 80 && w <= 600;
@@ -592,6 +618,12 @@
         wt.value = digits(wt.value).slice(0, 3);
         state.body.wt = wt.value;
         btn.disabled = !bodyValid();
+        // Number keypads on iPhone have no "done" key, so move on by itself once it's complete.
+        if (bodyValid() && state.body.wt.length === 3 && !state.lock) {
+          state.lock = true;
+          wt.blur();
+          later(function () { state.lock = false; go(1); }, 450);
+        }
       }
       main.querySelectorAll("select, input").forEach(function (f) { f.addEventListener("input", sync); f.addEventListener("change", sync); });
     },
@@ -642,7 +674,7 @@
       every(tickResend, 1000);
     }
   };
- 
+
   /* ---------- contact + OTP ---------- */
   function clearErr(k) {
     var e = main.querySelector('[data-err="' + k + '"]');
@@ -658,7 +690,7 @@
   }
   function setFormErr(msg) { var e = main.querySelector("#nq-form-err"); if (e) e.textContent = msg; }
   function setOtpMsg(msg) { var e = main.querySelector("#nq-otp-msg"); if (e) e.textContent = msg; }
- 
+
   function submitContact() {
     var c = state.contact, ok = true, firstBad = null;
     function bad(k, msg) { setErr(k, msg); ok = false; if (!firstBad) firstBad = k; }
@@ -672,12 +704,12 @@
       ok = false;
     }
     if (!ok) { if (firstBad) main.querySelector("#nq-" + firstBad).focus(); return; }
- 
+
     // Bot traps: honeypot filled or impossibly fast → fake success, send nothing.
     if (state.honeypot || (Date.now() - state.startedAt) / 1000 < CONFIG.minSecondsToComplete) {
       state.tier = computeTier(); state.done = true; render(); return;
     }
- 
+
     var btn = main.querySelector("[data-next]");
     btn.classList.add("is-loading");
     sendCode().then(function (ok) {
@@ -686,7 +718,7 @@
       go(1);
     });
   }
- 
+
   function sendCode() {
     var o = state.otp;
     o.code = newCode(CONFIG.otp.length);
@@ -701,7 +733,7 @@
       clinic: CONFIG.clinicName
     }).then(function (r) { return r.ok; });
   }
- 
+
   function tickResend() {
     var el = main.querySelector("#nq-resend");
     if (!el) return;
@@ -715,7 +747,7 @@
       : '<button type="button" class="nq-link" data-act="resend">Resend code</button>';
     if (el.innerHTML !== html) el.innerHTML = html;
   }
- 
+
   function otpFail(msg) {
     var box = main.querySelector("#nq-otp"), input = main.querySelector("#nq-code");
     box.classList.add("is-err", "is-shake");
@@ -724,7 +756,7 @@
     input.value = "";
     main.querySelectorAll(".nq-otp-box").forEach(function (b) { b.textContent = ""; });
   }
- 
+
   function verify(val) {
     var o = state.otp, c = CONFIG.otp;
     if (Date.now() - o.sentAt > c.expiresMinutes * 60000) return otpFail("That code expired. Tap resend to get a new one.");
@@ -734,7 +766,7 @@
     var left = c.maxAttempts - o.attempts;
     otpFail(left > 0 ? "That code didn't match. " + left + (left === 1 ? " try" : " tries") + " left." : "Too many tries. Tap resend to get a new code.");
   }
- 
+
   /* ---------- submit ---------- */
   function computeTier() {
     var a = state.answers;
@@ -742,7 +774,7 @@
     return cold ? "nurture" : "hot";
   }
   function label(id) { var a = state.answers[id]; return a ? a.l : ""; }
- 
+
   function buildPayload(verified) {
     var a = state.answers, c = state.contact, tier = computeTier();
     var tags = ["trt-quiz", "trt-" + tier, verified ? "phone-verified" : "phone-unverified"];
@@ -774,13 +806,13 @@
     UTM_KEYS.forEach(function (k) { p[k] = utm[k] || ""; });
     return p;
   }
- 
+
   function firePixel(verified, tier) {
     if (CONFIG.metaPixel === "off" || typeof window.fbq !== "function") return;
     if (CONFIG.metaPixel === "qualified" && !(verified && tier === "hot")) return;
     try { window.fbq("track", "Lead"); } catch (e) {}
   }
- 
+
   function finish(verified) {
     if (state.lock) return;
     state.lock = true;
@@ -798,16 +830,16 @@
       render();
     });
   }
- 
+
   /* =====================================================================
      EVENTS
      ===================================================================== */
   root.addEventListener("click", function (e) {
     if (state.lock) return;
     var t = e.target;
- 
+
     if (t.closest(".nq-back")) { if (!state.done) go(-1); return; }
- 
+
     var optBtn = t.closest("[data-opt]");
     if (optBtn) {
       var step = STEPS[state.i];
@@ -838,7 +870,7 @@
       }
       return;
     }
- 
+
     var chip = t.closest("[data-chip]");
     if (chip) {
       var v = chip.getAttribute("data-chip");
@@ -850,14 +882,14 @@
       });
       return;
     }
- 
+
     var next = t.closest("[data-next]");
     if (next && !next.disabled) {
       if (STEPS[state.i].type === "contact") submitContact();
       else go(1);
       return;
     }
- 
+
     var act = t.closest("[data-act]");
     if (act) {
       var which = act.getAttribute("data-act");
@@ -872,7 +904,7 @@
       }
     }
   });
- 
+
   render();
 })();
 </script>
